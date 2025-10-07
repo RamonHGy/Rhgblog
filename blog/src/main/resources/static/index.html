@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lobster&subset=latin,latin-ext">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="styles.css">
+    <base href="/">
+    <title>BlogRhG</title>
+</head>
+<body>
+<header class="page-header">
+    <div class="container">
+        <h1><a href="/">Blog OnRhG</a></h1>
+        <div class="search-container">
+            <div class="search-wrapper">
+                <input
+                        type="text"
+                        id="search-input"
+                        class="search-input"
+                        placeholder="Search..."
+                        autocomplete="off">
+                <div id="search-suggestions" class="search-suggestions"></div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="container">
+    <div class="row">
+        <div class="col" id="posts-container">
+        </div>
+    </div>
+    <div class="row" id="no-results" style="display: none;">
+        <div class="col text-center py-5">
+            <h3 class="text-muted">Nenhum post encontrado</h3>
+            <p>Tente pesquisar com outros termos</p>
+        </div>
+    </div>
+</main>
+
+<script>
+    let allPosts = [];
+    const searchInput = document.getElementById('search-input');
+    const suggestionsBox = document.getElementById('search-suggestions');
+
+    // Pega termo de busca da URL se existir
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchFromUrl = urlParams.get('search');
+
+    // Carrega todos os posts
+    fetch('http://localhost:8080/api/posts')
+        .then(response => response.json())
+        .then(posts => {
+            posts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            allPosts = posts;
+
+            if (searchFromUrl) {
+                document.getElementById('search-input').value = searchFromUrl;
+                const filteredPosts = filterPosts(searchFromUrl);
+                displayPosts(filteredPosts);
+            } else {
+                displayPosts(posts);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+
+    // Função para filtrar posts
+    function filterPosts(searchTerm) {
+        const term = searchTerm.toLowerCase();
+        return allPosts.filter(post => {
+            const title = post.title ? post.title.toLowerCase() : '';
+            const content = post.content ? post.content.toLowerCase() : '';
+            const tags = post.tags ? post.tags.join(' ').toLowerCase() : '';
+            return title.includes(term) || content.includes(term) || tags.includes(term);
+        });
+    }
+
+    // Função para destacar texto
+    function highlightText(text, searchTerm) {
+        if (!searchTerm) return text;
+        const regex = new RegExp(`(${searchTerm})`, 'gi');
+        return text.replace(regex, '<span class="suggestion-highlight">$1</span>');
+    }
+
+    // Função para mostrar sugestões
+    function showSuggestions(searchTerm) {
+        if (!searchTerm.trim()) {
+            suggestionsBox.classList.remove('show');
+            suggestionsBox.innerHTML = '';
+            return;
+        }
+
+        const results = filterPosts(searchTerm);
+        
+        if (results.length === 0) {
+            suggestionsBox.innerHTML = '<div class="no-results">Nenhum resultado encontrado</div>';
+            suggestionsBox.classList.add('show');
+            return;
+        }
+
+        const html = results.slice(0, 5).map(post => {
+            const preview = post.content.substring(0, 120);
+            return `
+                <div class="suggestion-item" onclick="goToPost(${post.id})">
+                    <div class="suggestion-title">${highlightText(post.title, searchTerm)}</div>
+                    <div class="suggestion-preview">${highlightText(preview, searchTerm)}...</div>
+                </div>
+            `;
+        }).join('');
+
+        suggestionsBox.innerHTML = html;
+        suggestionsBox.classList.add('show');
+    }
+
+    // Função para ir para o post
+    function goToPost(postId) {
+        window.location.href = `post.html?id=${postId}`;
+    }
+
+    // Event listener para pesquisa
+    let searchTimeout;
+    searchInput.addEventListener('input', function(e) {
+        clearTimeout(searchTimeout);
+        const searchTerm = e.target.value;
+        
+        searchTimeout = setTimeout(() => {
+            showSuggestions(searchTerm);
+            
+            if (searchTerm.trim()) {
+                const filteredPosts = filterPosts(searchTerm);
+                displayPosts(filteredPosts);
+            } else {
+                displayPosts(allPosts);
+            }
+        }, 300);
+    });
+
+    // Fechar sugestões ao clicar fora
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
+            suggestionsBox.classList.remove('show');
+        }
+    });
+
+    // Mostrar sugestões ao focar no input
+    searchInput.addEventListener('focus', function() {
+        if (searchInput.value.trim()) {
+            showSuggestions(searchInput.value);
+        }
+    });
+
+    // Função para exibir os posts
+    function displayPosts(posts) {
+        const container = document.getElementById('posts-container');
+        const noResults = document.getElementById('no-results');
+
+        container.innerHTML = '';
+
+        if (posts.length === 0) {
+            container.style.display = 'none';
+            noResults.style.display = 'block';
+            return;
+        }
+
+        container.style.display = 'block';
+        noResults.style.display = 'none';
+
+        posts.forEach(post => {
+            const preview = post.content.length > 200
+                ? post.content.substring(0,70) + '...'
+                : post.content;
+
+            const date = new Date(post.createdAt).toLocaleDateString('pt-BR');
+
+            let tagsHtml = '';
+            if (post.tags && post.tags.length > 0) {
+                tagsHtml = '<div class="mt-2">';
+                post.tags.forEach(tag => {
+                    tagsHtml += `<span class="badge badge-primary mr-1">${tag}</span>`;
+                });
+                tagsHtml += '</div>';
+            }
+
+            container.innerHTML += `
+                <a href="post.html?id=${post.id}" style="text-decoration: none; color: inherit;">
+                    <div class="card mb-3 shadow-sm">
+                        <div class="card-body">
+                            <h2 class="card-title h4">${post.title}</h2>
+                            <p>${preview}</p>
+                            <time class="text-muted">Publicado em: ${date}</time>
+                            ${tagsHtml}
+                        </div>
+                    </div>
+                </a>
+            `;
+        });
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Admin</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+
+<style>
+    body {
+            background: #C25100;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-box {
+            background: white;
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 400px;
+            width: 100%;
+        }
+        .login-box h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #C25100;
+        }
+
+        .login-box button {
+            background: #C25100;
+            border: none;
+            color: white;
+            font-size: 16px;
+            border-radius: 10px;
+            transition: background 0.3s ease;
+        }
+
+        .login-box button:hover {
+            background: #C25100;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+</style>
+
+<div class="login-box">
+    <h2>Admin Login</h2>
+
+    <div th:if="${error}" class="alert alert-danger">
+        <span th:text="${error}"></span>
+    </div>
+
+    <div th:if="${message}" class="alert alert-success">
+        <span th:text="${message}"></span>
+    </div>
+
+    <form th:action="@{/login}" method="post">
+        <div class="form-group">
+            <label for="username">User</label>
+            <input type="text"
+                   class="form-control"
+                   id="username"
+                   name="username"
+                   required
+                   autofocus>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password"
+                   class="form-control"
+                   id="password"
+                   name="password"
+                   required>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Enter</button>
+    </form>
+
+    <div class="text-center mt-3">
+        <a href="/">Back to the blog</a>
+    </div>
+</div>
+</body>
+</html>
